@@ -20,6 +20,8 @@
   </p>
 </div>
 
+![Toplet：把 Mac 刘海变成随手可用的工作台](docs/assets/toplet-intro.png)
+
 ![Toplet 首页](docs/screenshots/home.png)
 
 ![Toplet 待办](docs/screenshots/todo.png)
@@ -104,14 +106,6 @@ npm start
 | `npm run build` | 生成 Apple Silicon DMG |
 | `npm run build:zip` | 生成 ZIP 分发包 |
 
-官网位于 `website/`，要求 Node.js 22.13.0+：
-
-```bash
-cd website
-npm install
-npm run dev
-```
-
 ## 项目结构
 
 ```text
@@ -123,8 +117,7 @@ npm run dev
 ├── tests/                  # Node 单元测试
 ├── build/                  # 图标、签名与 DMG 配置
 ├── scripts/                # Codex / Claude Code 通知转发
-├── docs/                   # 设计、ADR 与发布说明
-└── website/                # React 19 + Vinext 官网
+└── docs/                   # 设计、ADR、项目视觉与发布说明
 ```
 
 ## 发布

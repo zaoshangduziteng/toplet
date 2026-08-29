@@ -1,4 +1,4 @@
-# 桌面刘海屏待办
+# Toplet
 
 一个常驻在 macOS 屏幕顶部刘海位置的纯单色玻璃**仪表盘**：默认折叠成刘海大小，点击从刘海垂下展开，含**首页 / 待办 / 笔记 / 链接 / 录制 / 密钥**等 Tab。首页包含居中的 1:1 镜子、Markdown 速记、常用指令、快速录音、汽水音乐、番茄钟和当前窗口；剪贴板默认关闭、可从菜单栏「显示功能」启用；Codex / Claude Code / GPT 完成事件会弹出提醒并进入首页任务状态。
 
@@ -20,13 +20,11 @@
 - 启动开发：`npm start`
 - 安装依赖：`npm install`
 - 打包发布：`npm run build`（已接入 electron-builder；仅在用户明确确认后执行）
-- 官网开发：`cd website && npm install && npm run dev`
-- 官网检查：`cd website && npm run lint && npm run build`
 
 ## 目录结构
 
 ```
-桌面刘海屏待办/
+Toplet/
   package.json       # Electron 依赖 + 启动脚本
   main.js            # 主进程：窗口创建、定位、置顶与 IPC
   preload.js         # 安全桥接 contextBridge
@@ -38,7 +36,6 @@
     assets/app-logo-128.png    # 提醒窗口小尺寸 Logo
   docs/
     DASHBOARD-DESIGN.md  # 仪表盘设计演进与当前产品规格
-  website/               # React 19 + Vinext 官网源码
 ```
 
 ## 关键设计参数

@@ -9,18 +9,15 @@
 ## 技术栈
 
 - 桌面端：Electron 33 + 原生 HTML/CSS/JavaScript，无渲染层构建步骤
-- 官网：React 19 + Vinext + 原生 CSS，位于 `website/`
 - 数据：LocalStorage + `userData/clipboard-images/` + `userData/recordings/`，无后端和云同步
 - 包管理器：npm
-- Node：桌面端使用 Node 18+；官网要求 Node 22.13.0+
+- Node：桌面端使用 Node 18+
 
 ## 命令
 
 - 桌面开发：`npm install && npm start`
 - 桌面检查：`npm test`
 - 桌面打包：`npm run build`（只在用户明确确认后执行）
-- 官网开发：`cd website && npm install && npm run dev`
-- 官网检查：`cd website && npm run lint && npm run build`
 
 ## 目录结构
 
@@ -33,8 +30,7 @@
 ├── build/                  # DMG 打包钩子、entitlements 与应用图标
 ├── scripts/                # Codex 与 Claude Code 的通知转发脚本
 ├── tests/                  # Node 单元测试
-├── docs/                   # 设计说明、ADR 与验收图
-├── website/                # 官网 React/Vinext 源码
+├── docs/                   # 设计说明、ADR、项目视觉与验收图
 └── package.json
 ```
 
