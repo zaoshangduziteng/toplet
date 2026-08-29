@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="build/toplet-icon.png" width="112" alt="Toplet 图标" />
+  <img src="docs/assets/toplet-logo.png" width="120" alt="Toplet 图标" />
   <h1>Toplet</h1>
   <p><strong>把 Mac 刘海，变成随手可用的工作台。</strong></p>
   <p>待办、随笔记、链接、录音与本机 AI 提醒，始终贴顶待命。</p>
@@ -23,8 +23,6 @@
 ![Toplet：把 Mac 刘海变成随手可用的工作台](docs/assets/toplet-intro.png)
 
 ![Toplet 首页](docs/screenshots/home.png)
-
-![Toplet 待办](docs/screenshots/todo.png)
 
 ## 它是什么
 
