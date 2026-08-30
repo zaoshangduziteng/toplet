@@ -17,6 +17,7 @@
     "electron-builder": "^25.1.8"
   },
   "build": {
+    "buildVersion": "10201",
     "appId": "com.toplet.app",
     "productName": "Toplet",
     "artifactName": "Toplet-${version}-${arch}.${ext}",
