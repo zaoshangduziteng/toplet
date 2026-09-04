@@ -79,7 +79,7 @@ async function main() {
       columns: 2,
       api: true,
       mirror: true,
-      features: 6,
+      features: 7,
       shortcut: true,
       workspace: true,
       autoLaunch: true,

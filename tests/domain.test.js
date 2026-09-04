@@ -45,7 +45,76 @@ const {
   applyGeneratedNoteTitle,
   apiCredentialStatuses,
   prependClipboardHistory,
+  promptFallbackTitle,
+  normalizePromptTags,
+  createPrompt,
+  sortPrompts,
+  filterPrompts,
+  updatePrompt,
+  applyPromptOrganization,
+  markPromptUsed,
+  promptOrganizationFailure,
 } = domain;
+
+test('prompt model creates a searchable local asset without requiring a title', () => {
+  const prompt = createPrompt({ content: '# 你是一名资深产品经理\n请分析用户反馈。' }, 'p1', 100);
+  assert.equal(prompt.title, '你是一名资深产品经理');
+  assert.equal(prompt.titleSource, 'fallback');
+  assert.equal(prompt.organizationStatus, 'unclassified');
+  assert.deepEqual(prompt.tags, []);
+
+  assert.equal(promptFallbackTitle('  \n> 帮我写一封邮件'), '帮我写一封邮件');
+  assert.deepEqual(normalizePromptTags([' 产品 ', '#写作', '产品', '非常非常非常非常非常长的标签']), [
+    '产品', '写作', '非常非常非常非常非常长的标签',
+  ]);
+});
+
+test('prompt search covers title, body and tags while favorites and recent use sort first', () => {
+  const rows = [
+    createPrompt({ content: '分析竞品', title: '竞品研究', tags: ['产品'], updatedAt: 200 }, 'a', 100),
+    createPrompt({ content: '写一篇文章', title: '内容创作', tags: ['写作'], favorite: true, updatedAt: 100 }, 'b', 100),
+    createPrompt({ content: '整理会议记录', title: '会议纪要', tags: ['工作'], lastUsedAt: 300 }, 'c', 100),
+  ];
+  assert.deepEqual(sortPrompts(rows).map((item) => item.id), ['b', 'c', 'a']);
+  assert.deepEqual(filterPrompts(rows, '竞品').map((item) => item.id), ['a']);
+  assert.deepEqual(filterPrompts(rows, '写作').map((item) => item.id), ['b']);
+  assert.deepEqual(filterPrompts(rows, '会议记录').map((item) => item.id), ['c']);
+});
+
+test('AI organization protects user edits unless the user explicitly requests replacement', () => {
+  const prompt = createPrompt({
+    content: '分析用户访谈',
+    title: '我的标题',
+    titleSource: 'user',
+    tags: [],
+  }, 'p1', 100);
+  const background = applyPromptOrganization(prompt, { title: '访谈洞察分析', tags: ['用户研究', '产品'] }, 200);
+  assert.equal(background.title, '我的标题');
+  assert.deepEqual(background.tags, ['用户研究', '产品']);
+  assert.equal(background.tagsSource, 'ai');
+
+  const forced = applyPromptOrganization(background, { title: '访谈洞察分析', tags: ['研究'] }, 300, true);
+  assert.equal(forced.title, '访谈洞察分析');
+  assert.deepEqual(forced.tags, ['研究']);
+
+  const edited = updatePrompt(forced, { title: '用户访谈模板', tags: '产品，访谈' }, 400);
+  assert.equal(edited.titleSource, 'user');
+  assert.equal(edited.tagsSource, 'user');
+  const used = markPromptUsed(edited, 500);
+  assert.equal(used.useCount, 1);
+  assert.equal(used.lastUsedAt, 500);
+});
+
+test('AI organization failures explain configuration errors without blocking saved prompts', () => {
+  assert.deepEqual(promptOrganizationFailure({ error: 'invalid_endpoint' }), {
+    code: 'invalid_endpoint',
+    message: '模型地址无效或被安全策略拦截，请检查 Base URL',
+    needsConfig: true,
+  });
+  assert.equal(promptOrganizationFailure({ error: 'http_401' }).needsConfig, true);
+  assert.equal(promptOrganizationFailure({ error: 'http_429' }).message, 'AI 请求过于频繁，请稍后重试');
+  assert.equal(promptOrganizationFailure({ error: 'request_failed' }).needsConfig, false);
+});
 
 test('clipboard history preserves repeated copies of identical text', () => {
   const previous = [{ id: 'first', type: 'text', text: '同一段内容', timestamp: 100 }];

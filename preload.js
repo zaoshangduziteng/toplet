@@ -26,6 +26,7 @@ contextBridge.exposeInMainWorld('notchAPI', {
   deleteRecording: (audioPath) => ipcRenderer.invoke('recordings:delete', audioPath),
   revealRecording: (audioPath) => ipcRenderer.invoke('recordings:reveal', audioPath),
   organizeMaterial: (payload) => ipcRenderer.invoke('smart:organize-material', payload),
+  organizePrompt: (payload) => ipcRenderer.invoke('smart:organize-prompt', payload),
   listCredentials: () => ipcRenderer.invoke('credentials:list'),
   getCredential: (id) => ipcRenderer.invoke('credentials:get', id),
   saveCredential: (payload) => ipcRenderer.invoke('credentials:save', payload),

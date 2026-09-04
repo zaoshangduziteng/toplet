@@ -66,9 +66,14 @@ jobs:
         shell: zsh {0}
         run: |
           release_notes=$'## 安装\n\n1. 下载下方 `Toplet-*-arm64.dmg`。\n2. 打开 DMG，将 `Toplet.app` 拖入“应用程序”。\n3. 首次启动若被 macOS 拦截，打开“系统设置 → 隐私与安全性”，点击“仍要打开”。此操作只需一次。\n\n当前安装包适用于 Apple Silicon Mac。项目采用 ad-hoc 签名分发，不进行 Apple 公证，也不上架 Mac App Store。'
+          release_flags=()
+          if [[ "${GITHUB_REF_NAME}" == *-* ]]; then
+            release_flags+=(--prerelease)
+          fi
           gh release create "${GITHUB_REF_NAME}" \
             "${DMG_PATH}" \
             "${CHECKSUM_PATH}" \
             --title "Toplet ${GITHUB_REF_NAME}" \
             --generate-notes \
-            --notes "${release_notes}"
+            --notes "${release_notes}" \
+            "${release_flags[@]}"

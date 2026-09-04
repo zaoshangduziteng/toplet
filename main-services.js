@@ -31,6 +31,19 @@ function isPrivateAddress(address) {
   return true;
 }
 
+function validateConfiguredLlmEndpoint(value) {
+  let endpoint;
+  try { endpoint = value instanceof URL ? new URL(value.href) : new URL(String(value || '')); } catch (error) { return null; }
+  if (endpoint.protocol !== 'https:' || endpoint.username || endpoint.password) return null;
+  const hostname = endpoint.hostname.replace(/^\[|\]$/g, '').replace(/\.$/, '').toLowerCase();
+  if (!hostname || hostname === 'localhost' || hostname.endsWith('.local')) return null;
+  if (net.isIP(hostname) && isPrivateAddress(hostname)) return null;
+  // LLM 地址由用户在本机设置中明确保存，不来自网页或工作区数据。域名可能被 Clash、
+  // Surge 等代理解析成私有 Fake-IP；这里依赖 HTTPS 的证书与 SNI 校验，而不是再次按
+  // DNS 结果阻断。未受信任的收藏链接仍走 validatePublicHttpUrl 的严格 DNS 防护。
+  return endpoint;
+}
+
 function decodeHtmlEntities(value) {
   const named = {
     amp: '&',
@@ -104,6 +117,36 @@ function parseSmartMaterialMetadata(value) {
     .replace(/\s+/g, ' ')
     .trim()).slice(0, limit).join('');
   return { title: clean(parsed.title, 48), category: clean(parsed.category, 24) };
+}
+
+function parsePromptOrganization(value, existingTags = []) {
+  const source = String(value || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  let parsed;
+  try { parsed = JSON.parse(source); } catch (error) { return null; }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+  const clean = (text, limit) => Array.from(String(text || '')
+    .replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()).slice(0, limit).join('');
+  const seen = new Set();
+  const existing = new Set((Array.isArray(existingTags) ? existingTags : [])
+    .map((tag) => clean(String(tag || '').replace(/^#+/, ''), 8).toLocaleLowerCase('zh-CN'))
+    .filter(Boolean));
+  const tags = [];
+  let newTagCount = 0;
+  (Array.isArray(parsed.tags) ? parsed.tags : []).forEach((tag) => {
+    const normalized = clean(String(tag || '').replace(/^#+/, ''), 8);
+    const key = normalized.toLocaleLowerCase('zh-CN');
+    if (!normalized || seen.has(key) || tags.length >= 3) return;
+    if (!existing.has(key) && newTagCount >= 1) return;
+    seen.add(key);
+    if (!existing.has(key)) newTagCount += 1;
+    tags.push(normalized);
+  });
+  return {
+    title: clean(parsed.title, 18),
+    tags,
+  };
 }
 
 function selectTranscriptionSettings(current, legacy) {
@@ -278,7 +321,7 @@ function screenRecordingAccessDecision(status) {
   return null;
 }
 
-const CONFIGURABLE_FEATURES = new Set(['todo', 'notes', 'links', 'recordings', 'credentials', 'clip']);
+const CONFIGURABLE_FEATURES = new Set(['todo', 'prompts', 'notes', 'links', 'recordings', 'credentials', 'clip']);
 
 function updateFeaturePreference(features, featureId, enabled) {
   if (!CONFIGURABLE_FEATURES.has(featureId) || typeof enabled !== 'boolean') return null;
@@ -341,6 +384,7 @@ async function controlSodaMusic(action, dependencies = {}, currentPlaying = fals
 
 module.exports = {
   isPrivateAddress,
+  validateConfiguredLlmEndpoint,
   decodeHtmlEntities,
   extractPageTitle,
   extractFaviconHref,
@@ -351,6 +395,7 @@ module.exports = {
   normalizeCredentialInput,
   parseSmartLinkMetadata,
   parseSmartMaterialMetadata,
+  parsePromptOrganization,
   selectTranscriptionSettings,
   clipboardServicePolicy,
   screenRecordingAccessDecision,

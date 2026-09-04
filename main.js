@@ -24,6 +24,7 @@ const crypto = require('crypto');
 const { execFile, execFileSync } = require('child_process');
 const {
   isPrivateAddress,
+  validateConfiguredLlmEndpoint,
   extractPageTitle,
   recordingExtension,
   normalizeWindowRows,
@@ -33,6 +34,7 @@ const {
   parseSmartLinkMetadata,
   extractFaviconHref,
   parseSmartMaterialMetadata,
+  parsePromptOrganization,
   clipboardServicePolicy,
   screenRecordingAccessDecision,
   updateFeaturePreference,
@@ -178,6 +180,7 @@ const EXPANDED_PANEL_HEIGHT = 540;
 const TAB_SIZES = {
   home: { width: EXPANDED_WIDTH, panelHeight: EXPANDED_PANEL_HEIGHT },
   todo: { width: EXPANDED_WIDTH, panelHeight: EXPANDED_PANEL_HEIGHT },
+  prompts: { width: EXPANDED_WIDTH, panelHeight: EXPANDED_PANEL_HEIGHT },
   notes: { width: EXPANDED_WIDTH, panelHeight: EXPANDED_PANEL_HEIGHT },
   clip: { width: EXPANDED_WIDTH, panelHeight: EXPANDED_PANEL_HEIGHT },
   links: { width: EXPANDED_WIDTH, panelHeight: EXPANDED_PANEL_HEIGHT },
@@ -1075,21 +1078,6 @@ function createWindow() {
   });
 }
 
-function toggleVisibility() {
-  if (!mainWindow) {
-    createWindow();
-    return;
-  }
-  if (mainWindow.isVisible()) {
-    hideWindowAfterCollapse();
-  } else {
-    hideWhenCollapsed = false;
-    repositionWindow(getTargetDisplay()); // 显示前先回到鼠标所在屏顶部
-    mainWindow.show();
-    refreshTrayMenu();
-  }
-}
-
 function isAutoLaunchEnabled() {
   if (process.platform !== 'darwin') return false;
   try {
@@ -1112,6 +1100,7 @@ function setAutoLaunch(enabled) {
 const DEFAULT_FEATURES = {
   home: true,
   todo: true,
+  prompts: true,
   notes: true,
   links: true,
   recordings: true,
@@ -1324,7 +1313,7 @@ function refreshTrayMenu() {
   if (!tray) return;
   const autoLaunch = isAutoLaunchEnabled();
   const settings = readAppSettings();
-  const featureLabels = { todo: '待办', notes: '笔记', links: '链接', recordings: '录制', credentials: '密钥', clip: '剪贴板' };
+  const featureLabels = { todo: '待办', prompts: '提示词', notes: '笔记', links: '链接', recordings: '录制', credentials: '密钥', clip: '剪贴板' };
   const menu = Menu.buildFromTemplate([
     {
       label: 'API 配置…',
@@ -1720,18 +1709,19 @@ async function enrichLinkMetadata(url, title) {
   const endpoint = config.baseUrl.endsWith('/chat/completions')
     ? config.baseUrl
     : `${config.baseUrl.replace(/\/$/, '')}/chat/completions`;
-  const safeEndpoint = await validatePublicHttpUrl(endpoint);
+  const safeEndpoint = validateConfiguredLlmEndpoint(endpoint);
   if (!safeEndpoint) return { title, category: '' };
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), LINK_FETCH_TIMEOUT_MS);
   try {
     const response = await fetch(safeEndpoint, {
       method: 'POST',
+      redirect: 'error',
       signal: controller.signal,
       headers: {
         Authorization: `Bearer ${config.apiKey}`,
         'Content-Type': 'application/json',
-        'User-Agent': 'Toplet/1.0.2 (+local bookmark organizer)',
+        'User-Agent': `Toplet/${app.getVersion()} (+local bookmark organizer)`,
       },
       body: JSON.stringify({
         model: config.model,
@@ -1773,7 +1763,7 @@ async function inspectLink(rawUrl) {
         signal: controller.signal,
         headers: {
           Accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.2',
-          'User-Agent': 'Toplet/1.0.2 (+local bookmark metadata)',
+          'User-Agent': `Toplet/${app.getVersion()} (+local bookmark metadata)`,
         },
       });
     } catch (error) {
@@ -1832,13 +1822,14 @@ ipcMain.handle('smart:organize-material', async (event, payload) => {
   const endpoint = config.baseUrl.endsWith('/chat/completions')
     ? config.baseUrl
     : `${config.baseUrl.replace(/\/$/, '')}/chat/completions`;
-  const safeEndpoint = await validatePublicHttpUrl(endpoint);
+  const safeEndpoint = validateConfiguredLlmEndpoint(endpoint);
   if (!safeEndpoint) return { ok: false, error: 'invalid_endpoint' };
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 9000);
   try {
     const response = await fetch(safeEndpoint, {
       method: 'POST',
+      redirect: 'error',
       signal: controller.signal,
       headers: { Authorization: `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1862,6 +1853,69 @@ ipcMain.handle('smart:organize-material', async (event, payload) => {
     const content = result && result.choices && result.choices[0] && result.choices[0].message && result.choices[0].message.content;
     const metadata = parseSmartMaterialMetadata(content);
     return metadata && metadata.title ? { ok: true, ...metadata } : { ok: false, error: 'invalid_response' };
+  } catch (error) {
+    return { ok: false, error: error && error.name === 'AbortError' ? 'timeout' : 'request_failed' };
+  } finally {
+    clearTimeout(timeout);
+  }
+});
+
+ipcMain.handle('smart:organize-prompt', async (event, payload) => {
+  const config = resolveLlmConfig();
+  const fullPrompt = String(payload && payload.text || '').trim();
+  const prompt = fullPrompt.slice(0, 16000);
+  const existingTags = (Array.isArray(payload && payload.existingTags) ? payload.existingTags : [])
+    .map((tag) => String(tag || '').replace(/\s+/g, ' ').trim().slice(0, 14))
+    .filter(Boolean)
+    .slice(0, 80);
+  if (!prompt) return { ok: false, error: 'empty_text' };
+  if (!config.apiKey || !config.model) return { ok: false, error: 'not_configured' };
+  const endpoint = config.baseUrl.endsWith('/chat/completions')
+    ? config.baseUrl
+    : `${config.baseUrl.replace(/\/$/, '')}/chat/completions`;
+  const safeEndpoint = validateConfiguredLlmEndpoint(endpoint);
+  if (!safeEndpoint) return { ok: false, error: 'invalid_endpoint' };
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
+  try {
+    const response = await fetch(safeEndpoint, {
+      method: 'POST',
+      redirect: 'error',
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        'Content-Type': 'application/json',
+        'User-Agent': `Toplet/${app.getVersion()} (+local prompt organizer)`,
+      },
+      body: JSON.stringify({
+        model: config.model,
+        temperature: 0.1,
+        response_format: { type: 'json_object' },
+        ...(config.baseUrl.includes('deepseek.com') ? { thinking: { type: 'disabled' } } : {}),
+        messages: [
+          {
+            role: 'system',
+            content: [
+              '你是个人提示词仓库整理器。理解提示词的用途，不得改写提示词正文。',
+              '只返回 JSON：{"title":"8到18字的具体标题","tags":["标签1","标签2"]}。',
+              '标签最多3个、每个2到8字。优先复用用户已有标签；没有合适标签时最多创建1个新标签。',
+            ].join(''),
+          },
+          {
+            role: 'user',
+            content: `已有标签：${existingTags.length ? existingTags.join('、') : '无'}\n\n请整理以下提示词：\n\n${prompt}`,
+          },
+        ],
+      }),
+    });
+    if (!response.ok) return { ok: false, error: `http_${response.status}` };
+    const result = await response.json();
+    const content = result && result.choices && result.choices[0]
+      && result.choices[0].message && result.choices[0].message.content;
+    const organization = parsePromptOrganization(content, existingTags);
+    return organization && organization.title
+      ? { ok: true, ...organization, truncated: fullPrompt.length > prompt.length }
+      : { ok: false, error: 'invalid_response' };
   } catch (error) {
     return { ok: false, error: error && error.name === 'AbortError' ? 'timeout' : 'request_failed' };
   } finally {
@@ -2644,9 +2698,8 @@ ipcMain.handle('transcription:set-config', (event, payload) => {
   if (workspaceId && !/^[A-Za-z0-9_-]{1,128}$/.test(workspaceId)) {
     return { ok: false, error: 'invalid_workspace' };
   }
-  let parsedLlmUrl;
-  try { parsedLlmUrl = new URL(llmBaseUrl); } catch (error) { parsedLlmUrl = null; }
-  if (!parsedLlmUrl || parsedLlmUrl.protocol !== 'https:' || parsedLlmUrl.username || parsedLlmUrl.password) {
+  const parsedLlmUrl = validateConfiguredLlmEndpoint(llmBaseUrl);
+  if (!parsedLlmUrl) {
     return { ok: false, error: 'invalid_llm_url' };
   }
   if ((apiKey || llmApiKey) && !safeStorage.isEncryptionAvailable()) {
@@ -2683,7 +2736,7 @@ ipcMain.handle('transcription:start', (event) => {
     const headers = {
       Authorization: `Bearer ${config.apiKey}`,
       'OpenAI-Beta': 'realtime=v1',
-      'User-Agent': 'Toplet/1.0.2',
+      'User-Agent': `Toplet/${app.getVersion()}`,
     };
     if (config.workspaceId) headers['X-DashScope-WorkSpace'] = config.workspaceId;
     const socket = new WebSocket(transcriptionUrl(config), { headers });

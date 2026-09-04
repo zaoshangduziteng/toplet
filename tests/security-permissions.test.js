@@ -31,7 +31,7 @@ test('startup status rendering does not decrypt secrets or eagerly open the cred
   assert.doesNotMatch(publicConfig, /resolveTranscriptionConfig|resolveLlmConfig|decryptStoredSecret/);
 
   const startup = rendererSource.match(
-    /renderCommands\(\);[\s\S]*?window\.NotchWorkspace =/,
+    /renderLinkGroups\(\);[\s\S]*?window\.NotchWorkspace =/,
   )?.[0] || '';
   assert.doesNotMatch(startup, /\n  loadCredentials\(\);/);
   assert.doesNotMatch(startup, /\n  loadTranscriptionConfig\(\);/);
@@ -40,4 +40,18 @@ test('startup status rendering does not decrypt secrets or eagerly open the cred
 test('decrypted keychain values are cached for the life of the main process', () => {
   assert.match(mainSource, /let credentialsVaultCache = null/);
   assert.match(mainSource, /const decryptedSecretCache = new Map\(\)/);
+});
+
+test('configured LLM requests use proxy-aware validation while untrusted links keep strict DNS checks', () => {
+  const promptHandler = mainSource.match(
+    /ipcMain\.handle\('smart:organize-prompt'[\s\S]*?\n\}\);/,
+  )?.[0] || '';
+  assert.match(promptHandler, /validateConfiguredLlmEndpoint\(endpoint\)/);
+  assert.doesNotMatch(promptHandler, /validatePublicHttpUrl\(endpoint\)/);
+
+  const linkInspector = mainSource.match(
+    /async function inspectLink\(rawUrl\)[\s\S]*?\n\}/,
+  )?.[0] || '';
+  assert.match(linkInspector, /validatePublicHttpUrl\(rawUrl\)/);
+  assert.match(linkInspector, /validatePublicHttpUrl\(new URL\(location, current\)\.toString\(\)\)/);
 });

@@ -6,6 +6,7 @@ const path = require('node:path');
 const html = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'index.html'), 'utf8');
 const appJs = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'app.js'), 'utf8');
 const workspaceJs = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'workspace.js'), 'utf8');
+const promptsJs = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'prompts.js'), 'utf8');
 
 test('clipboard rows define both favorite icons before rendering entries', () => {
   assert.match(appJs, /const starOutlineSvg\s*=/);
@@ -18,6 +19,19 @@ test('notes have a dedicated top-level tab and management panel', () => {
   assert.match(html, /id="notes-search"/);
   assert.match(html, /id="notes-list"/);
   assert.match(html, /id="notes-detail"/);
+});
+
+test('prompts replace home commands with one shared searchable repository', () => {
+  assert.match(html, /data-tab="prompts"/);
+  assert.match(html, /id="tab-prompts"/);
+  assert.match(html, /id="prompt-search"/);
+  assert.match(html, /id="prompt-list"/);
+  assert.match(html, /id="prompt-editor"/);
+  assert.match(html, /id="home-prompt-list"/);
+  assert.doesNotMatch(html, /id="command-add"/);
+  assert.match(promptsJs, /const PROMPTS_KEY = 'toplet-prompts-v1'/);
+  assert.match(promptsJs, /window\.notchAPI\.organizePrompt/);
+  assert.match(promptsJs, /localStorage\.setItem\(CONSENT_KEY, 'accepted'\)/);
 });
 
 test('home scratch note keeps only the save action', () => {

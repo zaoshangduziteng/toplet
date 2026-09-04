@@ -43,6 +43,14 @@
               </svg>
               <span class="tab-label">待办</span>
             </button>
+            <button class="tab" id="tab-button-prompts" type="button" data-tab="prompts" role="tab" aria-controls="tab-prompts" aria-selected="false" tabindex="-1">
+              <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 4h14v16H5z" />
+                <path d="M8 8h8M8 12h5" />
+                <path d="m15.5 15 .7 1.6 1.8.4-1.4 1.2.2 1.8-1.3-.9-1.5.9.4-1.8-1.4-1.2 1.8-.4z" />
+              </svg>
+              <span class="tab-label">提示词</span>
+            </button>
             <button class="tab" id="tab-button-clip" type="button" data-tab="clip" role="tab" aria-controls="tab-clip" aria-selected="false" tabindex="-1" hidden aria-hidden="true">
               <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
@@ -209,14 +217,16 @@
                 </div>
               </section>
 
-              <!-- 常用指令 -->
+              <!-- 提示词快捷入口 -->
               <section class="tile home-commands" data-home-module="commands" data-widget-size="medium">
                 <div class="tile-head">
-                  <span class="tile-label">常用指令</span>
-                  <button class="bulk-delete" id="command-bulk-delete" type="button" hidden>删除</button>
+                  <button class="home-prompts-open" id="home-prompts-open" type="button">
+                    <span class="tile-label">提示词</span>
+                    <span aria-hidden="true">↗</span>
+                  </button>
+                  <small class="home-prompts-count" id="home-prompts-count">0 条</small>
                 </div>
-                <input class="command-add" id="command-add" type="text" placeholder="输入指令，回车保存…" maxlength="500" autocomplete="off" spellcheck="false" />
-                <div class="command-list" id="command-list"></div>
+                <div class="home-prompt-list" id="home-prompt-list"></div>
               </section>
 
             </div>
@@ -302,6 +312,70 @@
                   />
                   <button class="todo-deadline-trigger" type="button" data-deadline-priority="P3" aria-label="选择日常待办截止时间"><span>日期</span></button>
                 </div>
+              </section>
+            </div>
+          </section>
+
+          <section id="tab-prompts" class="tab-panel" role="tabpanel" aria-labelledby="tab-button-prompts" aria-hidden="true" inert>
+            <div class="prompts-page">
+              <aside class="prompt-library tile">
+                <div class="prompt-library-head">
+                  <div>
+                    <span class="tile-label">提示词仓库</span>
+                    <strong id="prompt-count">0 条</strong>
+                  </div>
+                  <button class="workspace-button compact primary" id="prompt-new" type="button">新建</button>
+                </div>
+                <label class="prompt-search-wrap">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg>
+                  <input id="prompt-search" type="search" placeholder="搜索标题、正文或标签" aria-label="搜索提示词" autocomplete="off" />
+                  <kbd>⌘F</kbd>
+                </label>
+                <div class="prompt-list" id="prompt-list"></div>
+              </aside>
+              <section class="prompt-detail tile" id="prompt-detail">
+                <div class="prompt-detail-empty" id="prompt-detail-empty">
+                  <span class="prompt-empty-mark" aria-hidden="true">⌁</span>
+                  <strong>把好用的提示词留在这里</strong>
+                  <p>只需粘贴正文。Toplet 会先保存，再用 AI 补充标题和标签。</p>
+                  <button class="workspace-button primary" id="prompt-empty-new" type="button">新建第一条提示词</button>
+                </div>
+                <form class="prompt-editor" id="prompt-editor" hidden>
+                  <header class="prompt-editor-head">
+                    <div class="prompt-editor-state">
+                      <span class="prompt-status-dot" id="prompt-status-dot"></span>
+                      <span id="prompt-status-label">未分类</span>
+                      <time id="prompt-saved-state">尚未保存</time>
+                    </div>
+                    <div class="prompt-editor-actions">
+                      <button class="prompt-icon-action" id="prompt-favorite" type="button" aria-label="收藏提示词" title="收藏">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z"/></svg>
+                      </button>
+                      <button class="prompt-icon-action danger" id="prompt-delete" type="button" aria-label="删除提示词" title="删除">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M9 7V5h6v2M7 7l1 12h8l1-12"/></svg>
+                      </button>
+                    </div>
+                  </header>
+                  <label class="prompt-title-field">
+                    <span>标题</span>
+                    <input id="prompt-title" maxlength="80" placeholder="保存后自动生成" autocomplete="off" />
+                  </label>
+                  <label class="prompt-tags-field">
+                    <span>标签</span>
+                    <input id="prompt-tags" maxlength="80" placeholder="用逗号分隔，最多 3 个" autocomplete="off" />
+                  </label>
+                  <label class="prompt-content-field">
+                    <span>提示词正文</span>
+                    <textarea id="prompt-content" placeholder="粘贴一段值得重复使用的提示词…" spellcheck="false"></textarea>
+                  </label>
+                  <footer class="prompt-editor-footer">
+                    <span id="prompt-usage">尚未使用</span>
+                    <div>
+                      <button class="workspace-button compact" id="prompt-organize" type="button">AI 整理</button>
+                      <button class="workspace-button compact primary" id="prompt-primary-action" type="submit">保存提示词</button>
+                    </div>
+                  </footer>
+                </form>
               </section>
             </div>
           </section>
@@ -411,7 +485,7 @@
                   </div>
                   <div class="settings-status-list">
                     <div><span>通义百炼实时转写</span><small id="settings-transcription-status" data-state="empty">未配置</small></div>
-                    <div><span>DeepSeek 智能命名</span><small id="settings-llm-status" data-state="empty">未配置</small></div>
+                    <div><span>DeepSeek 智能整理</span><small id="settings-llm-status" data-state="empty">未配置</small></div>
                   </div>
                   <p>密钥由 macOS 安全存储加密，面板不会读取或回显已保存的明文。</p>
                 </section>
@@ -423,6 +497,7 @@
                   </div>
                   <div class="settings-feature-grid" id="settings-feature-list">
                     <label><span><b>待办</b><small>四象限任务</small></span><input type="checkbox" data-settings-feature="todo" aria-label="显示待办" /><i aria-hidden="true"></i></label>
+                    <label><span><b>提示词</b><small>搜索与 AI 整理</small></span><input type="checkbox" data-settings-feature="prompts" aria-label="显示提示词" /><i aria-hidden="true"></i></label>
                     <label><span><b>笔记</b><small>随笔与资料库</small></span><input type="checkbox" data-settings-feature="notes" aria-label="显示笔记" /><i aria-hidden="true"></i></label>
                     <label><span><b>链接</b><small>收藏与分组</small></span><input type="checkbox" data-settings-feature="links" aria-label="显示链接" /><i aria-hidden="true"></i></label>
                     <label><span><b>录制</b><small>录音与转写</small></span><input type="checkbox" data-settings-feature="recordings" aria-label="显示录制" /><i aria-hidden="true"></i></label>
@@ -488,7 +563,7 @@
             <div class="transcription-settings-head">
               <div>
                 <strong id="transcription-settings-title">API 配置</strong>
-                <span>实时转写与智能命名 · 密钥仅加密保存在本机</span>
+                <span>实时转写与智能整理 · 密钥仅加密保存在本机</span>
               </div>
               <button id="transcription-settings-close" type="button" aria-label="关闭转写设置">×</button>
             </div>
@@ -513,7 +588,7 @@
                 <input id="transcription-workspace" type="text" placeholder="业务空间 ID" autocomplete="off" spellcheck="false" />
               </label>
             </div>
-            <div class="api-settings-divider"><span>智能命名与分组</span><small>OpenAI-compatible</small></div>
+            <div class="api-settings-divider"><span>智能命名、分组与提示词</span><small>OpenAI-compatible</small></div>
             <div class="transcription-field api-key-field">
               <div class="api-field-heading">
                 <label for="llm-api-key">DeepSeek API Key</label>
@@ -539,6 +614,20 @@
             </div>
           </section>
         </div>
+        <div class="prompt-consent-backdrop" id="prompt-consent-backdrop" hidden>
+          <section class="prompt-consent-card" role="dialog" aria-modal="true" aria-labelledby="prompt-consent-title">
+            <span class="prompt-consent-symbol" aria-hidden="true">AI</span>
+            <div>
+              <span class="tile-label">首次使用</span>
+              <h2 id="prompt-consent-title">允许 AI 整理提示词？</h2>
+              <p>提示词正文会发送至你配置的模型服务，仅用于生成标题和标签。正文不会被改写；拒绝后仍可正常保存、搜索和复制。</p>
+            </div>
+            <div class="prompt-consent-actions">
+              <button class="workspace-button" id="prompt-consent-decline" type="button">暂不开启</button>
+              <button class="workspace-button primary" id="prompt-consent-accept" type="button">开启自动整理</button>
+            </div>
+          </section>
+        </div>
         <div class="status-toast" id="status-toast" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true" hidden>
           <span id="status-toast-message"></span>
           <button id="status-toast-action" type="button" hidden>撤销</button>
@@ -548,6 +637,7 @@
     <script src="domain.js"></script>
     <script src="effects.js"></script>
     <script src="app.js"></script>
+    <script src="prompts.js"></script>
     <script src="workspace.js"></script>
     <script src="icon-motion.js"></script>
   </body>

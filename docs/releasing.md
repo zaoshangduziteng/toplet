@@ -48,6 +48,8 @@ git push origin "v${version}"
 4. 生成 SHA-256 校验文件。
 5. 创建 GitHub Release，并上传 DMG 与校验文件。
 
+版本号包含连字符（例如 `v1.1.0-beta.3`）时，Release 会自动标记为 Pre-release；稳定版本标签则发布为正式 Release。两者都会附带 GitHub 自动生成的提交说明，仓库中的人工整理版本历史见 `CHANGELOG.md`。
+
 如果任一测试、版本检查或 DMG 校验失败，Release 不会创建。
 
 ## 手动验证发布流程（不发布）

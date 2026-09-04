@@ -36,7 +36,6 @@ Harness（直译"线束"）是 **包裹在 AI 模型外面的约束和反馈系�
 ├── CLAUDE.md                    # 🧠 核心配置（团队共享，提交到 git）
 ├── CLAUDE.local.md              # 🔒 个人覆盖（gitignore，不提交）
 ├── docs/
-│   ├── conventions.md           # 📐 编码规范详情（被 CLAUDE.md @import）
 │   ├── workflow.md              # 🔄 工作流详情（被 CLAUDE.md @import）
 │   └── PRD.md                   # 📋 产品需求文档（由 /prd skill 生成）
 ├── .claude/

@@ -192,6 +192,175 @@
     };
   }
 
+  function promptFallbackTitle(content) {
+    const firstLine = String(content || '')
+      .split(/\r?\n/)
+      .map((line) => line.replace(/^[#>*_`\-\d.\s]+/, '').replace(/\s+/g, ' ').trim())
+      .find(Boolean) || '未命名提示词';
+    const characters = Array.from(firstLine);
+    return characters.length > 28 ? `${characters.slice(0, 28).join('')}…` : firstLine;
+  }
+
+  function normalizePromptTags(value) {
+    const source = Array.isArray(value) ? value : String(value || '').split(/[,，]/);
+    const seen = new Set();
+    const tags = [];
+    source.forEach((tag) => {
+      const normalized = Array.from(String(tag || '')
+        .replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ')
+        .replace(/^#+/, '')
+        .replace(/\s+/g, ' ')
+        .trim()).slice(0, 14).join('');
+      const key = normalized.toLocaleLowerCase('zh-CN');
+      if (!normalized || seen.has(key) || tags.length >= 3) return;
+      seen.add(key);
+      tags.push(normalized);
+    });
+    return tags;
+  }
+
+  function createPrompt(value, id, timestamp = Date.now()) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    const content = String(value.content || '').trim();
+    if (!content) return null;
+    const createdAt = Math.max(0, Number(value.createdAt) || Number(timestamp) || Date.now());
+    const updatedAt = Math.max(createdAt, Number(value.updatedAt) || createdAt);
+    const tags = normalizePromptTags(value.tags);
+    const providedTitle = String(value.title || '').replace(/\s+/g, ' ').trim();
+    const titleSource = ['fallback', 'ai', 'user'].includes(value.titleSource)
+      ? value.titleSource
+      : providedTitle ? 'user' : 'fallback';
+    const tagsSource = ['empty', 'ai', 'user'].includes(value.tagsSource)
+      ? value.tagsSource
+      : tags.length ? 'user' : 'empty';
+    const allowedStatuses = new Set(['unclassified', 'organizing', 'organized', 'failed']);
+    const inferredStatus = tags.length ? 'organized' : 'unclassified';
+    return {
+      id: String(id || value.id || `prompt-${Date.now().toString(36)}`),
+      title: Array.from(providedTitle || promptFallbackTitle(content)).slice(0, 80).join(''),
+      content,
+      tags,
+      favorite: value.favorite === true,
+      createdAt,
+      updatedAt,
+      lastUsedAt: Math.max(0, Number(value.lastUsedAt) || 0),
+      useCount: Math.max(0, Math.floor(Number(value.useCount) || 0)),
+      organizationStatus: allowedStatuses.has(value.organizationStatus)
+        ? value.organizationStatus
+        : inferredStatus,
+      titleSource,
+      tagsSource,
+    };
+  }
+
+  function sortPrompts(prompts) {
+    return [...(Array.isArray(prompts) ? prompts : [])].sort((left, right) => (
+      Number(Boolean(right && right.favorite)) - Number(Boolean(left && left.favorite))
+      || (Number(right && right.lastUsedAt) || 0) - (Number(left && left.lastUsedAt) || 0)
+      || (Number(right && right.updatedAt) || 0) - (Number(left && left.updatedAt) || 0)
+    ));
+  }
+
+  function filterPrompts(prompts, query) {
+    const needle = String(query || '').trim().toLocaleLowerCase('zh-CN');
+    const sorted = sortPrompts(prompts);
+    if (!needle) return sorted;
+    return sorted.filter((prompt) => [
+      prompt && prompt.title,
+      prompt && prompt.content,
+      ...(Array.isArray(prompt && prompt.tags) ? prompt.tags : []),
+    ].some((value) => String(value || '').toLocaleLowerCase('zh-CN').includes(needle)));
+  }
+
+  function updatePrompt(prompt, patch, timestamp = Date.now()) {
+    const current = createPrompt(prompt);
+    if (!current || !patch || typeof patch !== 'object' || Array.isArray(patch)) return current;
+    const next = { ...current };
+    if (Object.prototype.hasOwnProperty.call(patch, 'content')) {
+      const content = String(patch.content || '').trim();
+      if (content) {
+        next.content = content;
+        if (current.titleSource === 'fallback') next.title = promptFallbackTitle(content);
+        if (content !== current.content) {
+          next.organizationStatus = next.tags.length ? 'organized' : 'unclassified';
+        }
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'title')) {
+      const title = Array.from(String(patch.title || '').replace(/\s+/g, ' ').trim()).slice(0, 80).join('');
+      next.title = title || promptFallbackTitle(next.content);
+      next.titleSource = title ? 'user' : 'fallback';
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'tags')) {
+      next.tags = normalizePromptTags(patch.tags);
+      next.tagsSource = next.tags.length ? 'user' : 'empty';
+      next.organizationStatus = next.tags.length ? 'organized' : 'unclassified';
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, 'favorite')) next.favorite = patch.favorite === true;
+    next.updatedAt = Math.max(current.updatedAt, Number(timestamp) || Date.now());
+    return next;
+  }
+
+  function applyPromptOrganization(prompt, organization, timestamp = Date.now(), force = false) {
+    const current = createPrompt(prompt);
+    if (!current || !organization || typeof organization !== 'object') return current;
+    const title = Array.from(String(organization.title || '').replace(/\s+/g, ' ').trim()).slice(0, 80).join('');
+    const tags = normalizePromptTags(organization.tags);
+    const next = { ...current };
+    if (title && (force || current.titleSource !== 'user')) {
+      next.title = title;
+      next.titleSource = 'ai';
+    }
+    if (tags.length && (force || current.tagsSource !== 'user')) {
+      next.tags = tags;
+      next.tagsSource = 'ai';
+    }
+    next.organizationStatus = next.tags.length ? 'organized' : 'unclassified';
+    next.updatedAt = Math.max(current.updatedAt, Number(timestamp) || Date.now());
+    return next;
+  }
+
+  function markPromptUsed(prompt, timestamp = Date.now()) {
+    const current = createPrompt(prompt);
+    if (!current) return null;
+    const usedAt = Math.max(current.lastUsedAt, Number(timestamp) || Date.now());
+    return {
+      ...current,
+      lastUsedAt: usedAt,
+      useCount: current.useCount + 1,
+    };
+  }
+
+  function promptOrganizationFailure(result) {
+    const code = String(result && result.error || 'request_failed');
+    const configuredErrors = new Set([
+      'not_configured',
+      'invalid_endpoint',
+      'http_400',
+      'http_401',
+      'http_402',
+      'http_403',
+      'http_404',
+    ]);
+    const messages = {
+      not_configured: '先配置模型 API，再使用 AI 整理',
+      invalid_endpoint: '模型地址无效或被安全策略拦截，请检查 Base URL',
+      http_400: '模型或请求参数无效，请检查模型名',
+      http_401: 'API Key 无效，请重新配置',
+      http_402: 'API 余额不足，请充值后重试',
+      http_403: 'API Key 没有该模型的访问权限',
+      http_404: '模型或 API 地址不存在，请检查配置',
+      http_429: 'AI 请求过于频繁，请稍后重试',
+      timeout: 'AI 请求超时，请重试',
+      invalid_response: 'AI 返回格式异常，请重试',
+    };
+    return {
+      code,
+      message: messages[code] || 'AI 整理失败，提示词已正常保存',
+      needsConfig: configuredErrors.has(code),
+    };
+  }
+
   function createRecording(value) {
     if (!value || typeof value !== 'object') return null;
     const transcript = String(value.transcript || '').trim();
@@ -748,6 +917,15 @@
     renameGroup,
     prependClipboardHistory,
     createCommand,
+    promptFallbackTitle,
+    normalizePromptTags,
+    createPrompt,
+    sortPrompts,
+    filterPrompts,
+    updatePrompt,
+    applyPromptOrganization,
+    markPromptUsed,
+    promptOrganizationFailure,
     createRecording,
     removeRecordingState,
     calculateRecordingDuration,

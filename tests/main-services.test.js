@@ -12,6 +12,8 @@ const {
   normalizeCredentialInput,
   parseSmartLinkMetadata,
   parseSmartMaterialMetadata,
+  parsePromptOrganization,
+  validateConfiguredLlmEndpoint,
   clipboardServicePolicy,
   updateFeaturePreference,
   controlSodaMusic,
@@ -41,6 +43,44 @@ test('favicon and smart material metadata are normalized safely', () => {
     title: '周会决策与行动项',
     category: '会议',
   });
+});
+
+test('prompt organization accepts JSON while enforcing title and tag taxonomy limits', () => {
+  assert.deepEqual(parsePromptOrganization('```json\n{"title":" 用户访谈分析 ","tags":["产品","#访谈","产品","多余","第二个新标签"]}\n```', ['产品', '访谈']), {
+    title: '用户访谈分析',
+    tags: ['产品', '访谈', '多余'],
+  });
+  assert.deepEqual(parsePromptOrganization('{"title":"这是一个明显超过十八个字因此必须截断的人工智能标题","tags":["第一个新标签","第二个新标签"]}'), {
+    title: '这是一个明显超过十八个字因此必须截断',
+    tags: ['第一个新标签'],
+  });
+  assert.deepEqual(parsePromptOrganization('{"title":"标题","tags":"产品"}'), {
+    title: '标题',
+    tags: [],
+  });
+  assert.equal(parsePromptOrganization('not-json'), null);
+});
+
+test('configured LLM endpoints support proxy fake-IP without allowing explicit private targets', () => {
+  assert.equal(
+    validateConfiguredLlmEndpoint('https://api.deepseek.com/chat/completions')?.href,
+    'https://api.deepseek.com/chat/completions'
+  );
+  assert.equal(
+    validateConfiguredLlmEndpoint('https://models.example.com:8443/v1/chat/completions')?.href,
+    'https://models.example.com:8443/v1/chat/completions'
+  );
+  for (const endpoint of [
+    'http://api.deepseek.com/chat/completions',
+    'https://user:secret@api.deepseek.com/chat/completions',
+    'https://localhost/chat/completions',
+    'https://model.local/chat/completions',
+    'https://127.0.0.1/chat/completions',
+    'https://10.2.3.4/chat/completions',
+    'https://[::1]/chat/completions',
+  ]) {
+    assert.equal(validateConfiguredLlmEndpoint(endpoint), null, endpoint);
+  }
 });
 
 test('transcription settings fall back to the legacy app directory only when current settings are absent', () => {
@@ -207,6 +247,10 @@ test('feature preferences only update configurable tabs and keep permanent tabs 
   assert.deepEqual(updateFeaturePreference({ todo: true, clip: false }, 'clip', true), {
     todo: true,
     clip: true,
+    home: true,
+  });
+  assert.deepEqual(updateFeaturePreference({ prompts: true }, 'prompts', false), {
+    prompts: false,
     home: true,
   });
   assert.equal(updateFeaturePreference({ todo: true }, 'home', false), null);

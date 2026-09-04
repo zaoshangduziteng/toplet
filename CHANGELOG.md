@@ -4,6 +4,28 @@
 
 ## [未发布]
 
+## [1.1.0-beta.3] - 2026-09-04
+
+### 新增
+
+- 新增本地提示词仓库，支持标题、正文、标签、搜索、收藏、自动保存、复制计数和删除撤销。
+- 首页「常用指令」升级为提示词快捷入口，与完整仓库共用同一份数据。
+- 复用已配置的 OpenAI-compatible 模型，在用户授权后异步生成提示词标题与标签；失败不影响本地保存和搜索。
+- 设置与菜单栏「显示功能」新增提示词开关。
+
+### 修复
+
+- 修复窗口宽度变化后顶部 Tab 激活胶囊可能错位的问题。
+- 修复提示词正文为空时仍复制旧内容并错误增加使用次数的问题。
+- 修复提示词新建草稿在切换列表或页面后丢失的问题。
+- 修复 AI 整理期间正文发生变化时，旧标题和标签仍覆盖新内容的问题。
+- 修复搜索无结果时右侧仍展示无关提示词，以及隐藏功能后首页入口仍保留的问题。
+- 修复关闭 AI 授权弹窗会被误记为拒绝授权的问题，并补齐键盘焦点循环与恢复。
+- 收紧 AI 标题和标签的结构化校验，超长正文仅分析前 16000 字时给出明确提示。
+- 修复 Clash、Surge 等代理使用 Fake-IP 时，已配置的 HTTPS 模型域名被误判为内网地址的问题；显式私有地址与不安全重定向仍会被拦截。
+- AI 整理失败时显示可操作的配置、鉴权、余额、限流或超时原因，不再只提示笼统失败。
+- 修复长提示词摘要会越过左侧列表卡片边界的问题，并补充界面回归检查。
+
 ### 品牌
 
 - 应用正式更名为 **Toplet**，统一桌面端、安装包、文档与发布流程中的名称。
@@ -36,7 +58,8 @@
 
 - 首个稳定版本，建立固定命名的 Apple Silicon DMG 发布流程。
 
-[未发布]: https://github.com/zaoshangduziteng/toplet/compare/v1.0.2...HEAD
+[未发布]: https://github.com/zaoshangduziteng/toplet/compare/v1.1.0-beta.3...HEAD
+[1.1.0-beta.3]: https://github.com/zaoshangduziteng/toplet/compare/v1.0.2...v1.1.0-beta.3
 [1.0.2]: https://github.com/zaoshangduziteng/toplet/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/zaoshangduziteng/toplet/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/zaoshangduziteng/toplet/releases/tag/v1.0.0

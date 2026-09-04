@@ -10,7 +10,6 @@ const TOPLET_STORAGE_MIGRATIONS = [
   ['notch-home-layout-v2', 'toplet-home-layout-v2'],
   ['notch-clip-history', 'toplet-clip-history'],
   ['notch-clip-favorites', 'toplet-clip-favorites'],
-  ['notch-home-commands', 'toplet-home-commands'],
   ['notch-link-groups', 'toplet-link-groups'],
   ['notch-recordings', 'toplet-recordings'],
   ['notch-hidden-windows', 'toplet-hidden-windows'],
@@ -741,7 +740,7 @@ if (window.notchAPI && typeof window.notchAPI.onMetricsChanged === 'function') {
 
 // ============ Tab 切换 ============
 const TAB_KEY = 'toplet-active-tab';
-const ALL_TABS = ['home', 'todo', 'notes', 'links', 'recordings', 'credentials', 'clip', 'settings'];
+const ALL_TABS = ['home', 'todo', 'prompts', 'notes', 'links', 'recordings', 'credentials', 'clip', 'settings'];
 let TABS = ALL_TABS.filter((name) => name !== 'clip');
 let tabButtons = Array.from(document.querySelectorAll('.tab:not([hidden])'));
 const tabPanels = Array.from(document.querySelectorAll('.tab-panel'));
@@ -767,6 +766,9 @@ function applyFeatureSettings(settings) {
     tabButtons[Math.ceil(tabButtons.length / 2)]?.classList.add('tab-split-start');
   }
   if (!TABS.includes(activeTab)) setActiveTab('home');
+  const promptHomeTile = document.querySelector('[data-home-module="commands"]');
+  if (promptHomeTile) promptHomeTile.hidden = features.prompts === false;
+  if (typeof applyHomeLayout === 'function') applyHomeLayout(false);
   requestAnimationFrame(positionIndicator);
 }
 
@@ -880,6 +882,7 @@ async function setActiveTab(name) {
 if (tabIndicator) {
   tabIndicator.addEventListener('transitionend', positionIndicator);
 }
+window.addEventListener('resize', () => requestAnimationFrame(positionIndicator));
 
 Array.from(document.querySelectorAll('.tab[data-tab]')).forEach((btn) => {
   btn.addEventListener('click', (e) => {
@@ -2503,12 +2506,14 @@ function saveHomeLayout() {
 
 function applyHomeLayout(animate = false) {
   if (!homeBento) return;
+  const layoutTiles = homeTiles.filter((tile) => !tile.hidden);
   const firstRects = animate
-    ? new Map(homeTiles.map((tile) => [tile, tile.getBoundingClientRect()]))
+    ? new Map(layoutTiles.map((tile) => [tile, tile.getBoundingClientRect()]))
     : null;
 
-  const packedLayout = window.NotchDomain.packHomeWidgetLayout(homeOrder, homeSizes, 12, 4);
-  homeTiles.forEach((tile) => {
+  const visibleOrder = homeOrder.filter((moduleId) => layoutTiles.some((tile) => tile.dataset.homeModule === moduleId));
+  const packedLayout = window.NotchDomain.packHomeWidgetLayout(visibleOrder, homeSizes, 12, 4);
+  layoutTiles.forEach((tile) => {
     const moduleId = tile.dataset.homeModule;
     const orderIndex = Math.max(0, homeOrder.indexOf(moduleId));
     const size = homeSizes[moduleId] || HOME_SIZE_DEFAULTS[moduleId];
