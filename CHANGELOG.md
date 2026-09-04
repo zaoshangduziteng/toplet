@@ -4,7 +4,7 @@
 
 ## [未发布]
 
-## [1.1.0-beta.3] - 2026-09-04
+## [1.1.0] - 2026-09-04
 
 ### 新增
 
@@ -34,6 +34,11 @@
 - 重新生成 README 介绍图及真实界面截图，移除旧作者照片和私人示例数据。
 - 移除上游官网源码、部署工作流、历史官网素材以及仓库主页中的旧官网链接。
 
+## [1.1.0-beta.3] - 2026-09-04
+
+### 测试版
+
+- 提示词管理仓库的公开测试版本；完成功能验收后晋升为 `v1.1.0` 稳定版。
 
 ## [1.0.2] - 2026-08-29
 
@@ -58,7 +63,8 @@
 
 - 首个稳定版本，建立固定命名的 Apple Silicon DMG 发布流程。
 
-[未发布]: https://github.com/zaoshangduziteng/toplet/compare/v1.1.0-beta.3...HEAD
+[未发布]: https://github.com/zaoshangduziteng/toplet/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/zaoshangduziteng/toplet/compare/v1.0.2...v1.1.0
 [1.1.0-beta.3]: https://github.com/zaoshangduziteng/toplet/compare/v1.0.2...v1.1.0-beta.3
 [1.0.2]: https://github.com/zaoshangduziteng/toplet/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/zaoshangduziteng/toplet/compare/v1.0.0...v1.0.1

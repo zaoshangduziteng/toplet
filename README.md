@@ -43,7 +43,7 @@ Toplet 是一个常驻 macOS 屏幕顶部的本地工作台。默认折叠成物
 
 ## 下载与安装
 
-> 当前测试版本：**1.1.0-beta.3** · 支持 **Apple Silicon Mac**
+> 当前版本：**1.1.0** · 支持 **Apple Silicon Mac**
 
 1. 前往 [GitHub Releases](https://github.com/zaoshangduziteng/toplet/releases/latest) 下载 `Toplet-*-arm64.dmg`。
 2. 打开 DMG，将 `Toplet.app` 拖入「应用程序」。
@@ -54,7 +54,7 @@ Toplet 是一个常驻 macOS 屏幕顶部的本地工作台。默认折叠成物
 
 ## 更新日志
 
-当前稳定版本为 **v1.0.2**，最新测试版本为 **v1.1.0-beta.3**。正在开发但尚未发布的改动会先记录在 `[未发布]`，发版时再归档到对应版本，避免 README 随版本增加而持续膨胀。
+当前稳定版本为 **v1.1.0**。正在开发但尚未发布的改动会先记录在 `[未发布]`，发版时再归档到对应版本，避免 README 随版本增加而持续膨胀。
 
 完整版本历史、修复内容与未发布改动见 [CHANGELOG.md](CHANGELOG.md)。
 

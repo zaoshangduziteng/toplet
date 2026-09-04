@@ -1,6 +1,6 @@
 {
   "name": "toplet",
-  "version": "1.1.0-beta.3",
+  "version": "1.1.0",
   "description": "Toplet - a local workspace that lives under the Mac notch",
   "main": "main.js",
   "author": "zaoshangduziteng",
@@ -17,7 +17,7 @@
     "electron-builder": "^25.1.8"
   },
   "build": {
-    "buildVersion": "11003",
+    "buildVersion": "11004",
     "appId": "com.toplet.app",
     "productName": "Toplet",
     "artifactName": "Toplet-${version}-${arch}.${ext}",
